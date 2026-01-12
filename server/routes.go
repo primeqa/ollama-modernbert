@@ -1136,6 +1136,15 @@ func GetModelInfo(req api.ShowRequest) (*api.ShowResponse, error) {
 		QuantizationLevel: m.Config.FileType,
 	}
 
+	// For image generation models, populate details from imagegen package
+	if slices.Contains(m.Capabilities(), model.CapabilityImageGeneration) {
+		if info, err := imagegen.GetModelInfo(name.String()); err == nil {
+			modelDetails.Family = info.Architecture
+			modelDetails.ParameterSize = format.HumanNumber(uint64(info.ParameterCount))
+			modelDetails.QuantizationLevel = info.Quantization
+		}
+	}
+
 	if req.System != "" {
 		m.System = req.System
 	}
@@ -1215,6 +1224,10 @@ func GetModelInfo(req api.ShowRequest) (*api.ShowResponse, error) {
 
 	// skip loading tensor information if this is a remote model
 	if m.Config.RemoteHost != "" && m.Config.RemoteModel != "" {
+		return resp, nil
+	}
+
+	if slices.Contains(m.Capabilities(), model.CapabilityImageGeneration) {
 		return resp, nil
 	}
 
